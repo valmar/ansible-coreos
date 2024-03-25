@@ -1,0 +1,7 @@
+---
+- name: Configure Fedora Workstation
+  hosts: all
+  tasks:
+    - import_tasks: tasks/zfs.yml
+    - import_tasks: tasks/timezone.yml
+    - import_tasks: tasks/homebrew.yml

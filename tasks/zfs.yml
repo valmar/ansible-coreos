@@ -1,0 +1,10 @@
+---
+- name: Check if mount point for data ZFS pool exists
+  stat:
+    path: "/mnt/data/Media"
+  register: media_folder_existence_check
+
+- name: Mount data ZFS pool
+  become: true
+  ansible.builtin.command: 'zpool import -f data'
+  when: not media_folder_existence_check.stat.exists

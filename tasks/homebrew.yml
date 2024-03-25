@@ -1,0 +1,63 @@
+---
+- name: Check if Homebrew is already installed
+  stat: 
+    path: /home/linuxbrew/.linuxbrew/Homebrew/bin/brew
+  register: homebrew
+
+- name: Install Homebrew
+  block:
+
+    - name: Download Homebrew installer
+      become: true
+      ansible.builtin.get_url: 
+        url: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+        dest: /tmp/install.sh
+        mode: '755'
+
+    - name: Allow valmar user to run sudo commands without password
+      become: true
+      community.general.sudoers:
+        name: valmar-sudo
+        user: valmar
+        commands: ALL
+        nopassword: true
+        state: present
+
+    - name: Execute Homebrew installer
+      become: true
+      become_user: valmar
+      ansible.builtin.shell:
+        cmd: NONINTERACTIVE=1 /tmp/install.sh
+
+    - name: Remove Homebrew installer
+      become: true
+      ansible.builtin.file: 
+        path: /tmp/install.sh 
+        state: absent
+
+    - name: Revoke previous sudo grants
+      become: true
+      community.general.sudoers:
+        name: valmar-sudo
+        state: absent
+
+    - name: Create Homebrew profile file
+      become: true
+      ansible.builtin.copy:
+        src: 'brew.sh'
+        dest: '/etc/profile.d/brew.sh'
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+        backup: true
+
+    - name: Add Homebrew path to sudo secure_path
+      become: true
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers
+        backrefs: yes
+        regexp: "^(Defaults    secure_path.*)$"
+        line: '\1:/home/linuxbrew/.linuxbrew/bin'
+        validate: /usr/sbin/visudo -cf %s
+
+  when: homebrew.stat.exists == false 
